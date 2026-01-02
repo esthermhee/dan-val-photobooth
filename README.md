@@ -1,37 +1,49 @@
-# dan-val-photobooth
-
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 <title>Dan & Val’s Photobooth</title>
 
+<link href="https://fonts.googleapis.com/css2?family=Homemade+Apple&display=swap" rel="stylesheet">
+
 <style>
-  body {
-    font-family: Georgia, serif;
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
     background: #f6f2ec;
-    text-align: center;
-    padding: 20px;
+    font-family: Georgia, serif;
+    touch-action: manipulation;
   }
 
-  h1 { margin-bottom: 4px; }
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  h1 { margin-bottom: 6px; }
+  p { margin-top: 0; }
 
   #booth {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 14px;
+    gap: 16px;
   }
 
-  /* SIDE PROGRESS FRAMES */
+  /* SIDE PROGRESS */
   #progress {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
   }
 
   .step {
-    width: 16px;
-    height: 80px;
+    width: 18px;
+    height: 90px;
     border: 1px solid #000;
     background: #fff;
   }
@@ -45,8 +57,8 @@
   }
 
   video {
-    width: 300px;
-    height: 375px; /* 4:5 preview */
+    width: 320px;
+    height: 400px;
     object-fit: cover;
     transform: scaleX(-1);
     filter: grayscale(100%);
@@ -60,17 +72,27 @@
     display: none;
     align-items: center;
     justify-content: center;
-    font-size: 72px;
+    font-size: 80px;
     font-weight: bold;
     color: white;
     background: rgba(0,0,0,0.35);
   }
 
+  /* FLASH */
+  #flash {
+    position: fixed;
+    inset: 0;
+    background: white;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 999;
+  }
+
   button, a {
-    margin-top: 14px;
-    padding: 12px 20px;
-    font-size: 16px;
-    border-radius: 8px;
+    margin-top: 16px;
+    padding: 16px 28px;
+    font-size: 18px;
+    border-radius: 10px;
     border: none;
     cursor: pointer;
     text-decoration: none;
@@ -94,7 +116,7 @@
 <body>
 
 <h1>Dan & Val’s Photobooth</h1>
-<p>4 shots · black & white · instant keepsake</p>
+<p>Tap · Pose · Repeat</p>
 
 <div id="booth">
   <div id="progress">
@@ -110,9 +132,10 @@
   </div>
 </div>
 
-<br>
-<button id="start">Start</button><br>
+<button id="start">Start</button>
 <a id="download">Download Photostrip</a>
+
+<div id="flash"></div>
 
 <canvas id="photoCanvas"></canvas>
 <canvas id="stripCanvas"></canvas>
@@ -125,6 +148,7 @@ const startBtn = document.getElementById("start");
 const countdown = document.getElementById("countdown");
 const download = document.getElementById("download");
 const steps = document.querySelectorAll(".step");
+const flash = document.getElementById("flash");
 
 const photoCtx = photoCanvas.getContext("2d");
 const stripCtx = stripCanvas.getContext("2d");
@@ -134,12 +158,21 @@ const COUNT = 4;
 const W = 480;
 const H = 600;
 
-navigator.mediaDevices.getUserMedia({ video: { aspectRatio: 4/5 } })
-  .then(stream => video.srcObject = stream)
-  .catch(() => alert("Camera access required"));
+navigator.mediaDevices.getUserMedia({
+  video: { aspectRatio: 4/5 }
+}).then(stream => video.srcObject = stream);
 
-async function wait(ms) {
-  return new Promise(r => setTimeout(r, ms));
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+function addGrain(ctx, w, h) {
+  const imageData = ctx.getImageData(0, 0, w, h);
+  for (let i = 0; i < imageData.data.length; i += 4) {
+    const noise = (Math.random() - 0.5) * 18;
+    imageData.data[i] += noise;
+    imageData.data[i+1] += noise;
+    imageData.data[i+2] += noise;
+  }
+  ctx.putImageData(imageData, 0, 0);
 }
 
 async function countdownShot() {
@@ -152,7 +185,14 @@ async function countdownShot() {
   takePhoto();
 }
 
+function flashEffect() {
+  flash.style.opacity = 1;
+  setTimeout(() => flash.style.opacity = 0, 120);
+}
+
 function takePhoto() {
+  flashEffect();
+
   photoCanvas.width = W;
   photoCanvas.height = H;
 
@@ -163,34 +203,45 @@ function takePhoto() {
   photoCtx.drawImage(video, 0, 0, W, H);
   photoCtx.restore();
 
+  addGrain(photoCtx, W, H);
+
   PHOTOS.push(photoCanvas.toDataURL("image/png"));
   steps[PHOTOS.length - 1].classList.add("filled");
 }
 
 function buildStrip() {
   const gap = 12;
-  stripCanvas.width = W + 40;
-  stripCanvas.height = COUNT * H + gap * (COUNT - 1) + 40;
+  const padding = 24;
 
-  stripCtx.fillStyle = "#fff";
+  stripCanvas.width = W + padding * 2;
+  stripCanvas.height = COUNT * H + gap * (COUNT - 1) + 140;
+
+  stripCtx.fillStyle = "#000";
   stripCtx.fillRect(0, 0, stripCanvas.width, stripCanvas.height);
 
   PHOTOS.forEach((src, i) => {
     const img = new Image();
     img.src = src;
     img.onload = () => {
-      const x = 20;
-      const y = 20 + i * (H + gap);
+      const x = padding;
+      const y = padding + i * (H + gap);
 
       stripCtx.drawImage(img, x, y, W, H);
-      stripCtx.strokeStyle = "#000";
+      stripCtx.strokeStyle = "#fff";
       stripCtx.lineWidth = 1;
       stripCtx.strokeRect(x, y, W, H);
 
       if (i === COUNT - 1) {
+        stripCtx.fillStyle = "#fff";
+        stripCtx.textAlign = "center";
+        stripCtx.font = "36px 'Homemade Apple'";
+        stripCtx.fillText("Dan & Val", stripCanvas.width / 2, stripCanvas.height - 70);
+        stripCtx.font = "24px 'Homemade Apple'";
+        stripCtx.fillText("24.01.26", stripCanvas.width / 2, stripCanvas.height - 36);
+
         const final = stripCanvas.toDataURL("image/png");
         download.href = final;
-        download.download = "Dan-Val-Photobooth.png";
+        download.download = "Dan-Val-Photostrip.png";
         download.style.display = "inline-block";
       }
     };
@@ -213,3 +264,4 @@ startBtn.onclick = async () => {
 
 </body>
 </html>
+
