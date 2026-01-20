@@ -154,8 +154,8 @@ const stripCtx = stripCanvas.getContext("2d");
 
 const PHOTOS = [];
 const COUNT = 4;
-const W = 480;
-const H = 600;
+const W = 405;
+const H = 506;
 
 navigator.mediaDevices.getUserMedia({
   video: { aspectRatio: 4/5 }
@@ -233,10 +233,11 @@ function buildStrip() {
       if (i === COUNT - 1) {
         stripCtx.fillStyle = "#fff";
         stripCtx.textAlign = "center";
-        stripCtx.font = "36px 'Homemade Apple'";
-        stripCtx.fillText("Dan & Val", stripCanvas.width / 2, stripCanvas.height - 70);
-        stripCtx.font = "24px 'Homemade Apple'";
-        stripCtx.fillText("24.01.26", stripCanvas.width / 2, stripCanvas.height - 36);
+        stripCtx.font = "42px 'Homemade Apple'";
+        stripCtx.fillText("Dan & Val", stripCanvas.width / 2, stripCanvas.height - 72);
+        stripCtx.font = "28px 'Homemade Apple'";
+        stripCtx.fillText("24.01.26", stripCanvas.width / 2, stripCanvas.height - 34);
+
 
         const final = stripCanvas.toDataURL("image/png");
         download.href = final;
