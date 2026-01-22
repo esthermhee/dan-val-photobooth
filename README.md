@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -33,7 +34,6 @@
     gap: 16px;
   }
 
-  /* SIDE PROGRESS */
   #progress {
     display: flex;
     flex-direction: column;
@@ -77,7 +77,6 @@
     background: rgba(0,0,0,0.35);
   }
 
-  /* FLASH */
   #flash {
     position: fixed;
     inset: 0;
@@ -174,6 +173,18 @@ function addGrain(ctx, w, h) {
   ctx.putImageData(imageData, 0, 0);
 }
 
+function applyTrueBlackAndWhite(ctx, w, h) {
+  const img = ctx.getImageData(0, 0, w, h);
+  const data = img.data;
+
+  for (let i = 0; i < data.length; i += 4) {
+    const gray = data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114;
+    data[i] = data[i+1] = data[i+2] = gray;
+  }
+
+  ctx.putImageData(img, 0, 0);
+}
+
 async function countdownShot() {
   for (let i = 3; i > 0; i--) {
     countdown.textContent = i;
@@ -195,13 +206,33 @@ function takePhoto() {
   photoCanvas.width = W;
   photoCanvas.height = H;
 
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+
+  const videoRatio = vw / vh;
+  const canvasRatio = W / H;
+
+  let sx, sy, sw, sh;
+
+  if (videoRatio > canvasRatio) {
+    sh = vh;
+    sw = vh * canvasRatio;
+    sx = (vw - sw) / 2;
+    sy = 0;
+  } else {
+    sw = vw;
+    sh = vw / canvasRatio;
+    sx = 0;
+    sy = (vh - sh) / 2;
+  }
+
   photoCtx.save();
   photoCtx.translate(W, 0);
   photoCtx.scale(-1, 1);
-  photoCtx.filter = "grayscale(100%)";
-  photoCtx.drawImage(video, 0, 0, W, H);
+  photoCtx.drawImage(video, sx, sy, sw, sh, 0, 0, W, H);
   photoCtx.restore();
 
+  applyTrueBlackAndWhite(photoCtx, W, H);
   addGrain(photoCtx, W, H);
 
   PHOTOS.push(photoCanvas.toDataURL("image/png"));
@@ -238,7 +269,6 @@ function buildStrip() {
         stripCtx.font = "28px 'Homemade Apple'";
         stripCtx.fillText("24.01.26", stripCanvas.width / 2, stripCanvas.height - 34);
 
-
         const final = stripCanvas.toDataURL("image/png");
         download.href = final;
         download.download = "Dan-Val-Photostrip.png";
@@ -264,4 +294,3 @@ startBtn.onclick = async () => {
 
 </body>
 </html>
-
